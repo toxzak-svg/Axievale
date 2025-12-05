@@ -1,4 +1,5 @@
 const express = require('express');
+const config = require('../config');
 const axieService = require('../services/axieService');
 const valuationService = require('../services/valuationService');
 
@@ -155,10 +156,10 @@ router.post('/valuation/batch', async (req, res) => {
       });
     }
 
-    if (axieIds.length > 10) {
+    if (axieIds.length > config.batchValuationLimit) {
       return res.status(400).json({
         success: false,
-        error: 'Maximum 10 Axies per batch request'
+        error: `Maximum ${config.batchValuationLimit} Axies per batch request`
       });
     }
 

@@ -248,7 +248,7 @@ class ValuationService {
       const prompt = this.buildInsightPrompt(axie, marketStats, analysis);
       
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: config.openaiModel,
         messages: [
           {
             role: 'system',

@@ -213,7 +213,7 @@ describe('API Routes', () => {
       expect(response.body.error).toBe('axieIds must be an array');
     });
 
-    it('should limit batch size to 10', async () => {
+    it('should limit batch size', async () => {
       const response = await request(app)
         .post('/api/valuation/batch')
         .send({ axieIds: Array(11).fill('123') })
@@ -221,7 +221,7 @@ describe('API Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toBe('Maximum 10 Axies per batch request');
+      expect(response.body.error).toMatch(/Maximum \d+ Axies per batch request/);
     });
   });
 });

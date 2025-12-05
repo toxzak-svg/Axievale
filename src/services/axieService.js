@@ -7,6 +7,7 @@ const config = require('../config');
 class AxieService {
   constructor() {
     this.endpoint = config.axieGraphqlEndpoint;
+    this.maxBodyLength = config.maxBodyLength;
   }
 
   /**
@@ -70,7 +71,7 @@ class AxieService {
         headers: {
           'Content-Type': 'application/json'
         },
-        maxBodyLength: 10 * 1024 * 1024 // 10MB limit
+        maxBodyLength: this.maxBodyLength
       });
 
       if (response.data.errors) {
@@ -169,7 +170,7 @@ class AxieService {
         headers: {
           'Content-Type': 'application/json'
         },
-        maxBodyLength: 10 * 1024 * 1024 // 10MB limit
+        maxBodyLength: this.maxBodyLength
       });
 
       if (response.data.errors) {
@@ -266,7 +267,7 @@ class AxieService {
         headers: {
           'Content-Type': 'application/json'
         },
-        maxBodyLength: 10 * 1024 * 1024 // 10MB limit
+        maxBodyLength: this.maxBodyLength
       });
 
       if (response.data.errors) {
