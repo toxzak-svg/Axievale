@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axievale - AI-Powered Axie Infinity Valuations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #00d4ff, #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #00d4ff, #7c3aed);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .marketplace-link {
+      background: linear-gradient(90deg, #7c3aed, #00d4ff);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .marketplace-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+    }
+
+    .search-section {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+    }
+
+    .search-title {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #a5b4fc;
+    }
+
+    .search-container {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 14px 20px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.2);
+      color: #fff;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #7c3aed;
+    }
+
+    .search-input::placeholder {
+      color: rgba(255,255,255,0.4);
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #7c3aed, #00d4ff);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .filters {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .filter-select {
+      padding: 10px 16px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.2);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .filter-select option {
+      background: #1a1a2e;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+      border-radius: 8px;
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: linear-gradient(90deg, #7c3aed, #00d4ff);
+      color: white;
+    }
+
+    .tab:hover:not(.active) {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    .axie-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .axie-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .axie-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      border-color: rgba(124, 58, 237, 0.5);
+    }
+
+    .axie-image {
+      width: 100%;
+      height: 200px;
+      object-fit: contain;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(0, 212, 255, 0.1));
+      padding: 16px;
+    }
+
+    .axie-info {
+      padding: 20px;
+    }
+
+    .axie-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .axie-name {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .axie-id {
+      color: rgba(255,255,255,0.5);
+      font-size: 14px;
+    }
+
+    .axie-class {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .class-aquatic { background: #00d4ff; color: #000; }
+    .class-beast { background: #ffc107; color: #000; }
+    .class-bird { background: #ff69b4; color: #000; }
+    .class-bug { background: #ff4444; color: #fff; }
+    .class-plant { background: #4caf50; color: #fff; }
+    .class-reptile { background: #9c27b0; color: #fff; }
+    .class-dawn { background: #ff9800; color: #000; }
+    .class-dusk { background: #607d8b; color: #fff; }
+    .class-mech { background: #795548; color: #fff; }
+
+    .axie-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      text-align: center;
+      padding: 8px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .axie-price {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .price-label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .price-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #00d4ff;
+    }
+
+    .valuation-section {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 16px;
+      margin-top: 16px;
+    }
+
+    .valuation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .valuation-title {
+      font-size: 14px;
+      color: #a5b4fc;
+      font-weight: 600;
+    }
+
+    .confidence-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .confidence-high { background: #4caf50; color: white; }
+    .confidence-medium { background: #ffc107; color: black; }
+    .confidence-low { background: #ff9800; color: black; }
+
+    .valuation-estimate {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .estimate-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #7c3aed;
+    }
+
+    .estimate-range {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .quality-score {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .score-bar {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7c3aed, #00d4ff);
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .score-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a5b4fc;
+    }
+
+    .get-valuation-btn {
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: #7c3aed;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid #ff4444;
+      color: #ff6b6b;
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #1a1a2e;
+      border-radius: 20px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .ai-insights {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(0, 212, 255, 0.1));
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .ai-insights-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #a5b4fc;
+      font-weight: 600;
+    }
+
+    .ai-insights p {
+      color: rgba(255,255,255,0.8);
+      line-height: 1.6;
+    }
+
+    .parts-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .part-tag {
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255,255,255,0.4);
+      font-size: 14px;
+    }
+
+    footer a {
+      color: #7c3aed;
+      text-decoration: none;
+    }
+
+    @media (max-width: 768px) {
+      .search-container {
+        flex-direction: column;
+      }
+
+      .axie-grid {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        flex-direction: column;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🪓</div>
+        <h1>Axievale</h1>
+      </div>
+      <a href="https://app.axieinfinity.com/marketplace/" target="_blank" class="marketplace-link">
+        🔗 Open Axie Marketplace
+      </a>
+    </header>
+
+    <div class="search-section">
+      <h2 class="search-title">🔍 Search & Valuate Axies</h2>
+      <div class="search-container">
+        <input type="text" id="axieIdInput" class="search-input" placeholder="Enter Axie ID (e.g., 12345678)">
+        <button id="searchBtn" class="btn btn-primary">Get Valuation</button>
+        <button id="browseBtn" class="btn btn-secondary">Browse Marketplace</button>
+      </div>
+      <div class="filters">
+        <select id="classFilter" class="filter-select">
+          <option value="">All Classes</option>
+          <option value="Aquatic">Aquatic</option>
+          <option value="Beast">Beast</option>
+          <option value="Bird">Bird</option>
+          <option value="Bug">Bug</option>
+          <option value="Plant">Plant</option>
+          <option value="Reptile">Reptile</option>
+          <option value="Dawn">Dawn</option>
+          <option value="Dusk">Dusk</option>
+          <option value="Mech">Mech</option>
+        </select>
+        <select id="sortFilter" class="filter-select">
+          <option value="PriceAsc">Price: Low to High</option>
+          <option value="PriceDesc">Price: High to Low</option>
+          <option value="Latest">Recently Listed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="marketplace">Marketplace</button>
+      <button class="tab" data-tab="recent-sales">Recent Sales</button>
+    </div>
+
+    <div id="content">
+      <div class="empty-state">
+        <div class="empty-state-icon">🪓</div>
+        <p>Click "Browse Marketplace" or search for an Axie ID to get started</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Axie Details & Valuation</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalContent">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Axievale - AI-Powered Axie Infinity Valuations</p>
+    <p>Not affiliated with Sky Mavis or Axie Infinity. <a href="https://axieinfinity.com" target="_blank">Official Site</a></p>
+  </footer>
+
+  <script>
+    // State
+    let currentTab = 'marketplace';
+    let axieCache = {};
+
+    // DOM elements
+    const content = document.getElementById('content');
+    const axieIdInput = document.getElementById('axieIdInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const browseBtn = document.getElementById('browseBtn');
+    const classFilter = document.getElementById('classFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const tabs = document.querySelectorAll('.tab');
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modalContent');
+
+    // Event listeners
+    searchBtn.addEventListener('click', () => searchAxie());
+    axieIdInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchAxie();
+    });
+    browseBtn.addEventListener('click', () => loadMarketplace());
+    classFilter.addEventListener('change', () => loadMarketplace());
+    sortFilter.addEventListener('change', () => loadMarketplace());
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentTab = tab.dataset.tab;
+        if (currentTab === 'marketplace') {
+          loadMarketplace();
+        } else {
+          loadRecentSales();
+        }
+      });
+    });
+
+    // Close modal on overlay click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Functions
+    function showLoading() {
+      content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    }
+
+    function showError(message) {
+      content.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    async function searchAxie() {
+      const axieId = axieIdInput.value.trim();
+      if (!axieId) {
+        alert('Please enter an Axie ID');
+        return;
+      }
+
+      showLoading();
+      try {
+        const response = await fetch(`/api/axie/${axieId}/valuation`);
+        const data = await response.json();
+
+        if (!data.success) {
+          showError(data.error || 'Axie not found');
+          return;
+        }
+
+        showAxieDetail(data.data.axie, data.data.valuation);
+      } catch (error) {
+        showError('Failed to fetch axie data: ' + error.message);
+      }
+    }
+
+    async function loadMarketplace() {
+      showLoading();
+      try {
+        const classValue = classFilter.value;
+        const sortValue = sortFilter.value;
+        
+        let url = `/api/marketplace?limit=12&sortBy=${sortValue}`;
+        if (classValue) {
+          url += `&classes=${classValue}`;
+        }
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.success) {
+          showError(data.error || 'Failed to load marketplace');
+          return;
+        }
+
+        renderAxieGrid(data.data);
+      } catch (error) {
+        showError('Failed to load marketplace: ' + error.message);
+      }
+    }
+
+    async function loadRecentSales() {
+      showLoading();
+      try {
+        const response = await fetch('/api/marketplace/recent-sales?limit=12');
+        const data = await response.json();
+
+        if (!data.success) {
+          showError(data.error || 'Failed to load recent sales');
+          return;
+        }
+
+        renderAxieGrid(data.data, true);
+      } catch (error) {
+        showError('Failed to load recent sales: ' + error.message);
+      }
+    }
+
+    function renderAxieGrid(axies, isSales = false) {
+      if (!axies || axies.length === 0) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <p>No Axies found matching your criteria</p>
+          </div>
+        `;
+        return;
+      }
+
+      content.innerHTML = `
+        <div class="axie-grid">
+          ${axies.map(axie => renderAxieCard(axie, isSales)).join('')}
+        </div>
+      `;
+
+      // Add click handlers for valuation buttons
+      document.querySelectorAll('.get-valuation-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const axieId = e.target.dataset.axieId;
+          openValuationModal(axieId);
+        });
+      });
+    }
+
+    function renderAxieCard(axie, isSales = false) {
+      const classLower = (axie.class || 'unknown').toLowerCase();
+      const price = isSales 
+        ? axie.auction?.currentPriceUSD 
+        : axie.auction?.currentPriceUSD;
+      const priceLabel = isSales ? 'Sold For' : 'Current Price';
+      
+      const imageUrl = axie.image || `https://axiecdn.axieinfinity.com/axies/${axie.id}/axie/axie-full-transparent.png`;
+
+      return `
+        <div class="axie-card">
+          <img src="${imageUrl}" alt="Axie #${axie.id}" class="axie-image" loading="lazy">
+          <div class="axie-info">
+            <div class="axie-header">
+              <div>
+                <div class="axie-name">${axie.name || 'Axie'}</div>
+                <div class="axie-id">#${axie.id}</div>
+              </div>
+              <span class="axie-class class-${classLower}">${axie.class || 'Unknown'}</span>
+            </div>
+            
+            <div class="axie-stats">
+              <div class="stat">
+                <div class="stat-label">HP</div>
+                <div class="stat-value">${axie.stats?.hp || '-'}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Speed</div>
+                <div class="stat-value">${axie.stats?.speed || '-'}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Skill</div>
+                <div class="stat-value">${axie.stats?.skill || '-'}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Morale</div>
+                <div class="stat-value">${axie.stats?.morale || '-'}</div>
+              </div>
+            </div>
+
+            <div class="axie-price">
+              <span class="price-label">${priceLabel}</span>
+              <span class="price-value">$${price ? parseFloat(price).toFixed(2) : '-.--'}</span>
+            </div>
+
+            <button class="btn btn-primary get-valuation-btn" data-axie-id="${axie.id}">
+              🤖 Get AI Valuation
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function openValuationModal(axieId) {
+      modal.classList.add('active');
+      modalContent.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      try {
+        const response = await fetch(`/api/axie/${axieId}/valuation`);
+        const data = await response.json();
+
+        if (!data.success) {
+          modalContent.innerHTML = `<div class="error-message">${data.error || 'Failed to get valuation'}</div>`;
+          return;
+        }
+
+        renderValuationModal(data.data.axie, data.data.valuation);
+      } catch (error) {
+        modalContent.innerHTML = `<div class="error-message">Failed to get valuation: ${error.message}</div>`;
+      }
+    }
+
+    function renderValuationModal(axie, valuation) {
+      const classLower = (axie.class || 'unknown').toLowerCase();
+      const analysis = valuation.analysis || {};
+      const confidence = valuation.confidence || 0;
+      const confidenceClass = confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low';
+      
+      const imageUrl = axie.image || `https://axiecdn.axieinfinity.com/axies/${axie.id}/axie/axie-full-transparent.png`;
+      
+      modalContent.innerHTML = `
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="${imageUrl}" alt="Axie #${axie.id}" style="max-width: 200px; height: auto;">
+          <h3 style="margin-top: 12px;">${axie.name || 'Axie'} #${axie.id}</h3>
+          <span class="axie-class class-${classLower}">${axie.class || 'Unknown'}</span>
+        </div>
+
+        <div class="valuation-section" style="border-top: none; padding-top: 0;">
+          <div class="valuation-header">
+            <span class="valuation-title">🤖 AI Valuation</span>
+            <span class="confidence-badge confidence-${confidenceClass}">${confidence}% Confidence</span>
+          </div>
+          
+          <div class="valuation-estimate">
+            <span class="estimate-value">$${valuation.estimatedValue?.toFixed(2) || '-.--'}</span>
+            ${valuation.priceRange ? `
+              <span class="estimate-range">
+                ($${valuation.priceRange.low?.toFixed(2)} - $${valuation.priceRange.high?.toFixed(2)})
+              </span>
+            ` : ''}
+          </div>
+
+          <div class="quality-score">
+            <span style="font-size: 12px; color: rgba(255,255,255,0.5);">Quality Score</span>
+            <div class="score-bar">
+              <div class="score-fill" style="width: ${analysis.overallScore || 0}%"></div>
+            </div>
+            <span class="score-value">${analysis.overallScore || 0}/100</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <h4 style="color: #a5b4fc; margin-bottom: 12px;">📊 Analysis</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="stat" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">
+              <div class="stat-label">Purity</div>
+              <div class="stat-value">${analysis.purity?.toFixed(0) || 0}%</div>
+            </div>
+            <div class="stat" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">
+              <div class="stat-label">Breed Count</div>
+              <div class="stat-value">${analysis.breedCount || 0}/7</div>
+            </div>
+            <div class="stat" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">
+              <div class="stat-label">Similar Listings</div>
+              <div class="stat-value">${valuation.marketComparison?.similarListings || 0}</div>
+            </div>
+            <div class="stat" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">
+              <div class="stat-label">Market Avg</div>
+              <div class="stat-value">$${valuation.marketComparison?.averagePrice?.toFixed(2) || '-.--'}</div>
+            </div>
+          </div>
+        </div>
+
+        ${analysis.valuableParts && analysis.valuableParts.length > 0 ? `
+          <div style="margin-top: 16px;">
+            <h4 style="color: #a5b4fc; margin-bottom: 8px;">✨ Valuable Parts</h4>
+            <div class="parts-list">
+              ${analysis.valuableParts.map(p => `<span class="part-tag">${p.name}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${valuation.aiInsights ? `
+          <div class="ai-insights">
+            <div class="ai-insights-header">
+              <span>🧠</span> AI Insights
+            </div>
+            <p>${valuation.aiInsights.summary}</p>
+          </div>
+        ` : ''}
+
+        <div style="margin-top: 20px; display: flex; gap: 12px;">
+          <a href="https://app.axieinfinity.com/marketplace/axies/${axie.id}" target="_blank" class="btn btn-primary" style="flex: 1; text-align: center; text-decoration: none;">
+            View on Marketplace
+          </a>
+          <button onclick="closeModal()" class="btn btn-secondary" style="flex: 1;">
+            Close
+          </button>
+        </div>
+      `;
+    }
+
+    function showAxieDetail(axie, valuation) {
+      openValuationModal(axie.id);
+    }
+
+    function closeModal() {
+      modal.classList.remove('active');
+    }
+
+    // Initial state message
+    content.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🪓</div>
+        <h3>Welcome to Axievale</h3>
+        <p style="margin-top: 8px;">Get AI-powered valuations for Axie Infinity creatures</p>
+        <p style="margin-top: 16px; color: rgba(255,255,255,0.7);">
+          Enter an Axie ID above or click "Browse Marketplace" to get started
+        </p>
+      </div>
+    `;
+  </script>
+</body>
+</html>
