@@ -250,8 +250,7 @@ class ValuationService {
       const fullPrompt = `${systemInstruction}\n\n${prompt}`;
       
       const result = await this.model.generateContent(fullPrompt);
-      const response = await result.response;
-      const content = response.text();
+      const content = result.response.text();
       
       return {
         summary: content,
