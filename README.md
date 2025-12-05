@@ -19,7 +19,7 @@ AI-powered Axie Infinity marketplace valuation tool. Browse the Axie marketplace
 
 - Node.js 18+ 
 - npm or yarn
-- OpenAI API key (optional, for enhanced AI insights)
+- Google AI Studio API key (optional, for enhanced AI insights)
 
 ### Installation
 
@@ -35,7 +35,7 @@ npm install
 cp .env.example .env
 
 # Edit .env with your API keys (optional)
-# OPENAI_API_KEY=your_key_here
+# GOOGLE_AI_API_KEY=your_key_here
 
 # Start the server
 npm start
@@ -88,7 +88,7 @@ The valuation algorithm considers:
 2. **Part Value** - Meta-relevant parts increase value
 3. **Breed Count** - Lower breed count = higher value potential
 4. **Market Comparison** - Comparison with similar listings
-5. **AI Enhancement** - GPT-powered insights (when configured)
+5. **AI Enhancement** - Google AI-powered insights (when configured)
 
 ### Confidence Score
 
@@ -124,7 +124,7 @@ axievale/
 |----------|-------------|----------|
 | `PORT` | Server port (default: 3000) | No |
 | `NODE_ENV` | Environment mode | No |
-| `OPENAI_API_KEY` | OpenAI API key for AI insights | No |
+| `GOOGLE_AI_API_KEY` | Google AI Studio API key for AI insights | No |
 | `AXIE_GRAPHQL_ENDPOINT` | Axie API endpoint | No |
 
 ## Contributing

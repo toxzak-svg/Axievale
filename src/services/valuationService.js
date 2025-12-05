@@ -1,4 +1,4 @@
-const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const config = require('../config');
 
 /**
@@ -6,10 +6,9 @@ const config = require('../config');
  */
 class ValuationService {
   constructor() {
-    if (config.openaiApiKey) {
-      this.openai = new OpenAI({
-        apiKey: config.openaiApiKey
-      });
+    if (config.googleAiApiKey) {
+      this.genAI = new GoogleGenerativeAI(config.googleAiApiKey);
+      this.model = this.genAI.getGenerativeModel({ model: config.googleAiModel });
     }
   }
 
@@ -26,9 +25,9 @@ class ValuationService {
     // Calculate base valuation from market data
     const baseValuation = this.calculateBaseValuation(axie, marketStats, recentSales);
     
-    // If OpenAI is configured, enhance with AI insights
+    // If Google AI is configured, enhance with AI insights
     let aiInsights = null;
-    if (this.openai) {
+    if (this.model) {
       aiInsights = await this.getAIInsights(axie, marketStats, analysis);
     }
 
@@ -233,37 +232,26 @@ class ValuationService {
   }
 
   /**
-   * Get AI-enhanced insights using OpenAI
+   * Get AI-enhanced insights using Google AI
    * @param {Object} axie - The Axie
    * @param {Object} marketStats - Market statistics
    * @param {Object} analysis - Trait analysis
    * @returns {Promise<Object>} AI insights
    */
   async getAIInsights(axie, marketStats, analysis) {
-    if (!this.openai) {
+    if (!this.model) {
       return null;
     }
 
     try {
       const prompt = this.buildInsightPrompt(axie, marketStats, analysis);
       
-      const response = await this.openai.chat.completions.create({
-        model: config.openaiModel,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert Axie Infinity market analyst. Provide concise, actionable insights about Axie valuations.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 300,
-        temperature: 0.7
-      });
-
-      const content = response.choices[0].message.content;
+      const systemInstruction = 'You are an expert Axie Infinity market analyst. Provide concise, actionable insights about Axie valuations.';
+      const fullPrompt = `${systemInstruction}\n\n${prompt}`;
+      
+      const result = await this.model.generateContent(fullPrompt);
+      const response = await result.response;
+      const content = response.text();
       
       return {
         summary: content,
