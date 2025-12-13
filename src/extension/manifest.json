@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Axievale Valuation Helper",
+  "version": "0.1.0",
+  "description": "Highlights undervalued/overvalued Axies on the marketplace using Axievale server valuations.",
+  "permissions": ["storage", "scripting", "activeTab", "tabs"],
+  "host_permissions": ["https://marketplace.axieinfinity.com/*", "https://axieinfinity.com/*"],
+  "background": { "service_worker": "src/extension/background.js" },
+  "action": { "default_popup": "src/extension/popup.html" },
+  "content_scripts": [
+    {
+      "matches": ["https://marketplace.axieinfinity.com/*"],
+      "js": ["src/extension/contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

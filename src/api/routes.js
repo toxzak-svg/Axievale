@@ -5,6 +5,24 @@ const valuationService = require('../services/valuationService');
 
 const router = express.Router();
 
+// Simple in-memory cache for extension valuations: { key -> { ts, value } }
+const extensionCache = new Map();
+const CACHE_TTL_MS = (config.extensionCacheTtlSec || 60) * 1000;
+
+function getCached(key) {
+  const entry = extensionCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    extensionCache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setCached(key, value) {
+  extensionCache.set(key, { ts: Date.now(), value });
+}
+
 /**
  * GET /api/marketplace
  * Fetch current marketplace listings
@@ -201,6 +219,70 @@ router.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString()
   });
+});
+
+/**
+ * POST /api/extension/valuation
+ * Endpoint intended for the browser extension to request a quick valuation and signal
+ * Body: { axieId: string, listingPrice?: number }
+ * Header (optional): x-extension-secret if configured
+ */
+router.post('/extension/valuation', async (req, res) => {
+  try {
+    // Optional secret validation
+    if (config.extensionSecret) {
+      const provided = req.get('x-extension-secret');
+      if (!provided || provided !== config.extensionSecret) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+      }
+    }
+
+    const { axieId, listingPrice } = req.body || {};
+    if (!axieId) {
+      return res.status(400).json({ success: false, error: 'axieId is required' });
+    }
+
+    const cacheKey = `${axieId}:${listingPrice || 'nil'}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json({ success: true, data: cached, cached: true });
+    }
+
+    // Fetch axie details
+    const axie = await axieService.getAxieDetails(axieId);
+    if (!axie) {
+      return res.status(404).json({ success: false, error: 'Axie not found' });
+    }
+
+    const marketStats = await axieService.getMarketStats(axie);
+
+    let recentSales = [];
+    try {
+      recentSales = await axieService.getRecentSales(20);
+    } catch (err) {
+      // ignore
+    }
+
+    const valuation = await valuationService.generateValuation(axie, marketStats, recentSales);
+
+    // Determine simple signal relative to valuation price range
+    let signal = 'unknown';
+    if (listingPrice && valuation && valuation.priceRange) {
+      const lp = Number(listingPrice);
+      if (!isNaN(lp)) {
+        if (lp < valuation.priceRange.low) signal = 'undervalued';
+        else if (lp > valuation.priceRange.high) signal = 'overvalued';
+        else signal = 'fair';
+      }
+    }
+
+    const result = { axie, valuation, signal };
+    setCached(cacheKey, result);
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 module.exports = router;
