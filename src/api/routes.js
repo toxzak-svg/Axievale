@@ -116,6 +116,24 @@ const extensionMetrics = {
   avgLatency() { return this.totalRequests ? Math.round(this.totalLatencyMs / this.totalRequests) : 0; }
 };
 
+// Optional Prometheus instrumentation (lazy)
+let prom = null;
+let promCounters = null;
+try {
+  const promClient = require('prom-client');
+  prom = promClient;
+  promCounters = {
+    requests: new prom.Counter({ name: 'axievale_extension_requests_total', help: 'Total extension requests' }),
+    errors: new prom.Counter({ name: 'axievale_extension_errors_total', help: 'Total extension errors' }),
+    cacheHits: new prom.Counter({ name: 'axievale_extension_cache_hits_total', help: 'Cache hits' }),
+    cacheMisses: new prom.Counter({ name: 'axievale_extension_cache_misses_total', help: 'Cache misses' }),
+    latency: new prom.Histogram({ name: 'axievale_extension_request_duration_ms', help: 'Request duration ms', buckets: [10,50,100,200,500,1000] })
+  };
+} catch (e) {
+  prom = null;
+  promCounters = null;
+}
+
 /**
  * GET /api/marketplace
  * Fetch current marketplace listings
@@ -323,12 +341,14 @@ router.get('/health', (req, res) => {
 router.post('/extension/valuation', perUserOrIpLimiter, async (req, res) => {
   const start = Date.now();
   extensionMetrics.totalRequests += 1;
+  if (promCounters && promCounters.requests) promCounters.requests.inc();
   try {
     // Optional secret validation
     if (config.extensionSecret) {
       const provided = req.get('x-extension-secret');
       if (!provided || provided !== config.extensionSecret) {
         extensionMetrics.totalErrors += 1;
+        if (promCounters && promCounters.errors) promCounters.errors.inc();
         return res.status(401).json({ success: false, error: 'Unauthorized' });
       }
     }
@@ -343,12 +363,15 @@ router.post('/extension/valuation', perUserOrIpLimiter, async (req, res) => {
     const cached = getCached(cacheKey);
     if (cached) {
       extensionMetrics.cacheHits += 1;
+      if (promCounters && promCounters.cacheHits) promCounters.cacheHits.inc();
       const latency = Date.now() - start;
       extensionMetrics.totalLatencyMs += latency;
+      if (promCounters && promCounters.latency) promCounters.latency.observe(latency);
       console.log(`[extension] cache hit ip=${req.ip || 'unknown'} axie=${axieId} signal=${cached.signal} latency=${latency}ms`);
       return res.json({ success: true, data: cached, cached: true });
     }
     extensionMetrics.cacheMisses += 1;
+    if (promCounters && promCounters.cacheMisses) promCounters.cacheMisses.inc();
 
     // Fetch axie details
     const axie = await axieService.getAxieDetails(axieId);
@@ -383,12 +406,14 @@ router.post('/extension/valuation', perUserOrIpLimiter, async (req, res) => {
     setCached(cacheKey, result);
 
     const latency = Date.now() - start;
-    extensionMetrics.totalLatencyMs += latency;
+      extensionMetrics.totalLatencyMs += latency;
+      if (promCounters && promCounters.latency) promCounters.latency.observe(latency);
     console.log(`[extension] request ip=${req.ip || 'unknown'} axie=${axieId} signal=${signal} cache=miss latency=${latency}ms`);
 
     res.json({ success: true, data: result });
   } catch (error) {
     extensionMetrics.totalErrors += 1;
+    if (promCounters && promCounters.errors) promCounters.errors.inc();
     res.status(500).json({ success: false, error: error.message });
   }
 });
