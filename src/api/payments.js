@@ -51,4 +51,34 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   res.json({ received: true });
 });
 
+/**
+ * POST /api/payments/create-checkout-session
+ * Body: { userId, priceId?, amount?, successUrl?, cancelUrl? }
+ * Creates a Stripe Checkout Session with metadata.userId so webhook can activate the user.
+ */
+router.post('/create-checkout-session', async (req, res) => {
+  if (!stripe) return res.status(501).json({ success: false, error: 'Stripe not configured' });
+
+  const { userId, priceId, amount, successUrl, cancelUrl } = req.body || {};
+  if (!userId) return res.status(400).json({ success: false, error: 'userId required' });
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [
+        priceId ? { price: priceId, quantity: 1 } : { price_data: { currency: 'usd', product_data: { name: 'Axievale subscription' }, unit_amount: Math.round((amount || 100) * 100) }, quantity: 1 }
+      ],
+      metadata: { userId },
+      success_url: successUrl || (process.env.SUCCESS_URL || 'https://example.com/success'),
+      cancel_url: cancelUrl || (process.env.CANCEL_URL || 'https://example.com/cancel')
+    });
+
+    res.json({ success: true, data: { id: session.id, url: session.url } });
+  } catch (err) {
+    console.error('Error creating stripe session:', err && err.message ? err.message : err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

@@ -78,22 +78,26 @@ async function userQuotaMiddleware(req, res, next) {
     const userKey = req.get('x-user-key');
     if (!userId || !userKey) return next(); // not a user-based request
 
-    const user = userStore.getUserById(userId);
-    if (!user || user.apiKey !== userKey) {
+    // Support both sync (file) and async (db) user stores by awaiting results
+    const user = await Promise.resolve(userStore.getUserById(userId));
+    if (!user || (user.apiKey !== userKey && user.api_key !== userKey)) {
       return res.status(401).json({ success: false, error: 'Invalid user credentials' });
     }
 
-    if (user.isPaid) return next();
+    const isPaid = user.isPaid || user.is_paid || false;
+    if (isPaid) return next();
 
-    if (user.trialRemaining > 0) {
-      userStore.decrementTrial(userId);
+    const remaining = user.trialRemaining || user.trial_remaining || 0;
+    if (remaining > 0) {
+      // decrementTrial may be async in DB store
+      await Promise.resolve(userStore.decrementTrial(userId));
       return next();
     }
 
     // Trial exhausted
     return res.status(402).json({ success: false, error: 'Payment required: trial exhausted' });
   } catch (err) {
-    console.warn('userQuotaMiddleware error', err.message);
+    console.warn('userQuotaMiddleware error', err && err.message ? err.message : err);
     return next();
   }
 }
@@ -426,8 +430,8 @@ router.post('/extension/valuation', perUserOrIpLimiter, async (req, res) => {
 router.post('/users/register', async (req, res) => {
   try {
     const { email } = req.body || {};
-    const user = userStore.createUser({ email });
-    res.json({ success: true, data: { id: user.id, apiKey: user.apiKey, trialRemaining: user.trialRemaining } });
+    const user = await Promise.resolve(userStore.createUser({ email }));
+    res.json({ success: true, data: { id: user.id, apiKey: user.apiKey || user.api_key, trialRemaining: user.trialRemaining || user.trial_remaining } });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -446,9 +450,9 @@ router.post('/users/:id/activate', async (req, res) => {
       }
     }
     const { id } = req.params;
-    const user = userStore.activateUser(id);
+    const user = await Promise.resolve(userStore.activateUser(id));
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-    res.json({ success: true, data: { id: user.id, isPaid: user.isPaid } });
+    res.json({ success: true, data: { id: user.id, isPaid: user.isPaid || user.is_paid } });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
