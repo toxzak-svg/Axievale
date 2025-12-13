@@ -31,6 +31,13 @@ app.use('/api', routes);
 app.use('/api/auth', authRoutes);
 app.use('/api/payments', paymentsRoutes);
 
+// Log payment provider availability
+if (config.stripeSecret) {
+  console.log('[server] Stripe secret detected; payments endpoints enabled');
+} else {
+  console.log('[server] Stripe not configured; payments endpoints will return 501 where applicable');
+}
+
 // Expose /metrics for Prometheus if available, otherwise leave to /api/extension/metrics
 if (promClient) {
   // Default metrics

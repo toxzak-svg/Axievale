@@ -2,9 +2,18 @@ const express = require('express');
 const router = express.Router();
 const config = require('../config');
 
-// Lazy load stripe
+// Lazy load stripe only when configured
 let stripe = null;
-try { stripe = require('stripe')(process.env.STRIPE_SECRET); } catch (e) { stripe = null; }
+try {
+  if (config.stripeSecret) {
+    const Stripe = require('stripe');
+    stripe = Stripe(config.stripeSecret);
+    console.log('[payments] Stripe initialized');
+  }
+} catch (e) {
+  stripe = null;
+  console.warn('[payments] stripe package missing or failed to initialize:', e && e.message ? e.message : e);
+}
 
 // userStore (db or json)
 let userStore = null;
@@ -20,7 +29,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   if (!stripe) return res.status(501).send('Stripe not configured');
 
   const sig = req.get('stripe-signature');
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = config.stripeWebhookSecret;
   let event;
 
   try {

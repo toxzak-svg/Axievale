@@ -25,4 +25,10 @@ module.exports = {
   ,
   // JWT secret used to sign short-lived tokens (set in production)
   jwtSecret: process.env.JWT_SECRET || null
+  ,
+  // Stripe configuration (optional)
+  stripeSecret: process.env.STRIPE_SECRET || null,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || null,
+  successUrl: process.env.SUCCESS_URL || null,
+  cancelUrl: process.env.CANCEL_URL || null
 };
