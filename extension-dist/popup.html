@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Axievale</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h3>Axievale</h3>
+  <form id="settingsForm">
+    <label for="baseUrl">Server base URL</label>
+    <input id="baseUrl" name="baseUrl" placeholder="https://your-server.example.com" />
+
+    <label for="extSecret">Extension secret (optional)</label>
+    <input id="extSecret" name="extSecret" placeholder="Optional secret for extension" />
+
+    <button id="save" type="button">Save</button>
+  </form>
+  <script src="popup.js"></script>
+</body>
+</html>

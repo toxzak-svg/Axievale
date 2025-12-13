@@ -5,9 +5,10 @@ const valuationService = require('../services/valuationService');
 
 const router = express.Router();
 
-// Simple in-memory cache for extension valuations: { key -> { ts, value } }
+// LRU-bounded in-memory cache for extension valuations: Map preserves insertion order
 const extensionCache = new Map();
 const CACHE_TTL_MS = (config.extensionCacheTtlSec || 60) * 1000;
+const CACHE_MAX_ENTRIES = config.extensionCacheMaxEntries || 1000;
 
 function getCached(key) {
   const entry = extensionCache.get(key);
@@ -16,12 +17,57 @@ function getCached(key) {
     extensionCache.delete(key);
     return null;
   }
+  // refresh LRU position
+  extensionCache.delete(key);
+  extensionCache.set(key, entry);
   return entry.value;
 }
 
 function setCached(key, value) {
+  // Evict oldest entries if exceeding max
+  if (extensionCache.size >= CACHE_MAX_ENTRIES) {
+    const oldestKey = extensionCache.keys().next().value;
+    if (oldestKey) extensionCache.delete(oldestKey);
+  }
   extensionCache.set(key, { ts: Date.now(), value });
 }
+
+// Simple rate-limiter per IP for extension endpoint
+const rateMap = new Map();
+const RATE_MAX = config.extensionRateLimitMax || 60;
+const RATE_WINDOW_MS = (config.extensionRateLimitWindowSec || 60) * 1000;
+
+function extensionRateLimiter(req, res, next) {
+  try {
+    const ip = req.ip || req.get('x-forwarded-for') || req.get('x-real-ip') || 'unknown';
+    const now = Date.now();
+    const entry = rateMap.get(ip) || { windowStart: now, count: 0 };
+    if (now - entry.windowStart > RATE_WINDOW_MS) {
+      entry.windowStart = now;
+      entry.count = 0;
+    }
+    entry.count += 1;
+    rateMap.set(ip, entry);
+    if (entry.count > RATE_MAX) {
+      return res.status(429).json({ success: false, error: 'Rate limit exceeded' });
+    }
+    return next();
+  } catch (err) {
+    // In case of rate limiter failure, allow request but log
+    console.warn('Rate limiter error', err);
+    return next();
+  }
+}
+
+// Metrics for extension requests
+const extensionMetrics = {
+  totalRequests: 0,
+  totalErrors: 0,
+  cacheHits: 0,
+  cacheMisses: 0,
+  totalLatencyMs: 0,
+  avgLatency() { return this.totalRequests ? Math.round(this.totalLatencyMs / this.totalRequests) : 0; }
+};
 
 /**
  * GET /api/marketplace
@@ -227,30 +273,40 @@ router.get('/health', (req, res) => {
  * Body: { axieId: string, listingPrice?: number }
  * Header (optional): x-extension-secret if configured
  */
-router.post('/extension/valuation', async (req, res) => {
+router.post('/extension/valuation', extensionRateLimiter, async (req, res) => {
+  const start = Date.now();
+  extensionMetrics.totalRequests += 1;
   try {
     // Optional secret validation
     if (config.extensionSecret) {
       const provided = req.get('x-extension-secret');
       if (!provided || provided !== config.extensionSecret) {
+        extensionMetrics.totalErrors += 1;
         return res.status(401).json({ success: false, error: 'Unauthorized' });
       }
     }
 
     const { axieId, listingPrice } = req.body || {};
     if (!axieId) {
+      extensionMetrics.totalErrors += 1;
       return res.status(400).json({ success: false, error: 'axieId is required' });
     }
 
     const cacheKey = `${axieId}:${listingPrice || 'nil'}`;
     const cached = getCached(cacheKey);
     if (cached) {
+      extensionMetrics.cacheHits += 1;
+      const latency = Date.now() - start;
+      extensionMetrics.totalLatencyMs += latency;
+      console.log(`[extension] cache hit ip=${req.ip || 'unknown'} axie=${axieId} signal=${cached.signal} latency=${latency}ms`);
       return res.json({ success: true, data: cached, cached: true });
     }
+    extensionMetrics.cacheMisses += 1;
 
     // Fetch axie details
     const axie = await axieService.getAxieDetails(axieId);
     if (!axie) {
+      extensionMetrics.totalErrors += 1;
       return res.status(404).json({ success: false, error: 'Axie not found' });
     }
 
@@ -279,10 +335,39 @@ router.post('/extension/valuation', async (req, res) => {
     const result = { axie, valuation, signal };
     setCached(cacheKey, result);
 
+    const latency = Date.now() - start;
+    extensionMetrics.totalLatencyMs += latency;
+    console.log(`[extension] request ip=${req.ip || 'unknown'} axie=${axieId} signal=${signal} cache=miss latency=${latency}ms`);
+
     res.json({ success: true, data: result });
   } catch (error) {
+    extensionMetrics.totalErrors += 1;
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+/**
+ * GET /api/extension/metrics
+ * Returns simple metrics for extension requests. Protected by extensionSecret if configured.
+ */
+router.get('/extension/metrics', (req, res) => {
+  if (config.extensionSecret) {
+    const provided = req.get('x-extension-secret');
+    if (!provided || provided !== config.extensionSecret) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+  }
+
+  res.json({
+    success: true,
+    data: {
+      totalRequests: extensionMetrics.totalRequests,
+      totalErrors: extensionMetrics.totalErrors,
+      cacheHits: extensionMetrics.cacheHits,
+      cacheMisses: extensionMetrics.cacheMisses,
+      avgLatencyMs: extensionMetrics.avgLatency()
+    }
+  });
 });
 
 module.exports = router;

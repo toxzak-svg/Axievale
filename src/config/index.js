@@ -12,7 +12,12 @@ module.exports = {
   // Optional secret that extensions must present in header `x-extension-secret` when calling extension endpoints
   extensionSecret: process.env.EXTENSION_SECRET || null,
   // Extension endpoint cache TTL seconds
-  extensionCacheTtlSec: parseInt(process.env.EXTENSION_CACHE_TTL_SEC || '60', 10)
+  extensionCacheTtlSec: parseInt(process.env.EXTENSION_CACHE_TTL_SEC || '60', 10),
+  // Extension rate limiting (per IP)
+  extensionRateLimitMax: parseInt(process.env.EXTENSION_RATE_LIMIT_MAX || '60', 10),
+  extensionRateLimitWindowSec: parseInt(process.env.EXTENSION_RATE_LIMIT_WINDOW_SEC || '60', 10),
+  // Max entries in extension LRU cache
+  extensionCacheMaxEntries: parseInt(process.env.EXTENSION_CACHE_MAX_ENTRIES || '1000', 10),
   ,
   // Comma-separated list of allowed CORS origins for API (e.g. https://marketplace.axieinfinity.com)
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
