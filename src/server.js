@@ -3,6 +3,11 @@ const cors = require('cors');
 const path = require('path');
 const config = require('./config');
 const routes = require('./api/routes');
+const authRoutes = require('./api/auth');
+const paymentsRoutes = require('./api/payments');
+// Prometheus client (optional)
+let promClient = null;
+try { promClient = require('prom-client'); } catch (e) { promClient = null; }
 
 const app = express();
 
@@ -23,6 +28,18 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // API routes
 app.use('/api', routes);
+app.use('/api/auth', authRoutes);
+app.use('/api/payments', paymentsRoutes);
+
+// Expose /metrics for Prometheus if available, otherwise leave to /api/extension/metrics
+if (promClient) {
+  // Default metrics
+  promClient.collectDefaultMetrics();
+  app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', promClient.register.contentType);
+    res.send(await promClient.register.metrics());
+  });
+}
 
 // Serve index.html for SPA routes
 app.get('*', (req, res) => {

@@ -19,4 +19,10 @@ module.exports = {
   extensionCacheMaxEntries: parseInt(process.env.EXTENSION_CACHE_MAX_ENTRIES || '1000', 10),
   // Comma-separated list of allowed CORS origins for API (e.g. https://marketplace.axieinfinity.com)
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
+  ,
+  // Trial requests per new user
+  trialRequests: parseInt(process.env.TRIAL_REQUESTS || '100', 10)
+  ,
+  // JWT secret used to sign short-lived tokens (set in production)
+  jwtSecret: process.env.JWT_SECRET || null
 };

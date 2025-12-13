@@ -59,6 +59,53 @@ function extensionRateLimiter(req, res, next) {
   }
 }
 
+// Per-user quota middleware backed by userStore (trial + paywall)
+// Prefer DB-backed store when available
+let userStore = null;
+try {
+  const dbStore = require('../services/userStoreDb');
+  if (dbStore) userStore = dbStore;
+} catch (e) {
+  // ignore
+}
+if (!userStore) {
+  userStore = require('../services/userStore');
+}
+
+async function userQuotaMiddleware(req, res, next) {
+  try {
+    const userId = req.get('x-user-id');
+    const userKey = req.get('x-user-key');
+    if (!userId || !userKey) return next(); // not a user-based request
+
+    const user = userStore.getUserById(userId);
+    if (!user || user.apiKey !== userKey) {
+      return res.status(401).json({ success: false, error: 'Invalid user credentials' });
+    }
+
+    if (user.isPaid) return next();
+
+    if (user.trialRemaining > 0) {
+      userStore.decrementTrial(userId);
+      return next();
+    }
+
+    // Trial exhausted
+    return res.status(402).json({ success: false, error: 'Payment required: trial exhausted' });
+  } catch (err) {
+    console.warn('userQuotaMiddleware error', err.message);
+    return next();
+  }
+}
+
+// Composite middleware: if user headers present, use userQuotaMiddleware, otherwise use IP rate limiter
+function perUserOrIpLimiter(req, res, next) {
+  const userId = req.get('x-user-id');
+  const userKey = req.get('x-user-key');
+  if (userId && userKey) return userQuotaMiddleware(req, res, next);
+  return extensionRateLimiter(req, res, next);
+}
+
 // Metrics for extension requests
 const extensionMetrics = {
   totalRequests: 0,
@@ -273,7 +320,7 @@ router.get('/health', (req, res) => {
  * Body: { axieId: string, listingPrice?: number }
  * Header (optional): x-extension-secret if configured
  */
-router.post('/extension/valuation', extensionRateLimiter, async (req, res) => {
+router.post('/extension/valuation', perUserOrIpLimiter, async (req, res) => {
   const start = Date.now();
   extensionMetrics.totalRequests += 1;
   try {
@@ -343,6 +390,42 @@ router.post('/extension/valuation', extensionRateLimiter, async (req, res) => {
   } catch (error) {
     extensionMetrics.totalErrors += 1;
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/users/register
+ * Create a new trial user and return credentials (userId + apiKey)
+ * Body: { email?: string }
+ */
+router.post('/users/register', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    const user = userStore.createUser({ email });
+    res.json({ success: true, data: { id: user.id, apiKey: user.apiKey, trialRemaining: user.trialRemaining } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/users/:id/activate
+ * Mark a user as paid (protected by extensionSecret) — placeholder for webhook
+ */
+router.post('/users/:id/activate', async (req, res) => {
+  try {
+    if (config.extensionSecret) {
+      const provided = req.get('x-extension-secret');
+      if (!provided || provided !== config.extensionSecret) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+      }
+    }
+    const { id } = req.params;
+    const user = userStore.activateUser(id);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, data: { id: user.id, isPaid: user.isPaid } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
