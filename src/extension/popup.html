@@ -1,19 +1,22 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Axievale</title>
-  <style>body{font-family:Arial;padding:12px;width:300px}label{display:block;margin-top:8px}button{margin-top:12px}</style>
+  <link rel="stylesheet" href="src/extension/popup.css">
 </head>
 <body>
   <h3>Axievale</h3>
-  <div>
-    <label>Server base URL</label>
-    <input id="baseUrl" style="width:100%" />
-    <label>Extension secret (optional)</label>
-    <input id="extSecret" style="width:100%" />
-    <button id="save">Save</button>
-  </div>
+  <form id="settingsForm">
+    <label for="baseUrl">Server base URL</label>
+    <input id="baseUrl" name="baseUrl" placeholder="https://your-server.example.com" />
+
+    <label for="extSecret">Extension secret (optional)</label>
+    <input id="extSecret" name="extSecret" placeholder="Optional secret for extension" />
+
+    <button id="save" type="button">Save</button>
+  </form>
   <script src="src/extension/popup.js"></script>
 </body>
 </html>
