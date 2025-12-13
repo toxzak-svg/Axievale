@@ -7,8 +7,18 @@ const routes = require('./api/routes');
 const app = express();
 
 // Middleware
-app.use(cors());
 app.use(express.json());
+
+// Configure CORS: allow listed origins, chrome-extension scheme, or no-origin (server-to-server)
+const allowedOrigins = config.corsAllowedOrigins || [];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests without origin (curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://')) return callback(null, true);
+    return callback(new Error('CORS not allowed'), false);
+  }
+}));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // API routes
