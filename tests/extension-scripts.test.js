@@ -38,7 +38,7 @@ test('contentScript extracts id and price and annotates elements', async () => {
       <div class="price">$12</div>
     </div>
   `;
-
+  
   // Mock chrome.runtime.sendMessage to return valuation
   chrome.runtime.sendMessage.mockImplementation(({ type }) => ({ success: true, data: { signal: 'undervalued', valuation: { estimatedValue: 10 } } }));
 
@@ -78,7 +78,7 @@ test('contentScript extracts id and price and annotates elements', async () => {
     try { clearTimeout(context.window.__axievale_mutation_timeout); } catch (e) {}
     context.window.__axievale_mutation_timeout = null;
   }
-});
+}, 2000);
 
 test('background handles getValuation and returns fetch error', async () => {
   const vm = require('vm');
@@ -122,9 +122,8 @@ test('background handles getValuation and returns fetch error', async () => {
     try { clearTimeout(bgContext.window.__axievale_mutation_timeout); } catch (e) {}
     bgContext.window.__axievale_mutation_timeout = null;
   }
-
   expect(sendResponse).toHaveBeenCalled();
-});
+}, 2000);
 
 test('popup reads and writes storage fields', async () => {
   // Build DOM expected by popup.js
@@ -156,4 +155,4 @@ test('popup reads and writes storage fields', async () => {
   document.getElementById('save').click();
   await new Promise(r => setTimeout(r, 10));
   expect(global.chrome.storage.sync.set).toHaveBeenCalled();
-});
+  }, 2000);

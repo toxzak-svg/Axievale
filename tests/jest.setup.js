@@ -6,3 +6,9 @@ if (typeof global.TextDecoder === 'undefined') global.TextDecoder = util.TextDec
 if (typeof global.fetch === 'undefined') {
   global.fetch = async () => ({ ok: false, status: 501, json: async () => ({}), text: async () => '' });
 }
+
+// Ensure external AI integrations are disabled during tests
+if (typeof process !== 'undefined') process.env.GOOGLE_AI_API_KEY = '';
+
+// Fail fast: set a reasonable global timeout for Jest tests (5s)
+jest.setTimeout(5000);
