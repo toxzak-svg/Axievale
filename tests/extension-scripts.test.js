@@ -16,9 +16,9 @@ beforeEach(() => {
   if (typeof global.window === 'undefined') global.window = global;
   if (typeof global.MutationObserver === 'undefined') {
     class _MO {
-      constructor(cb) { this._cb = cb; }
-      observe() {}
-      disconnect() {}
+      constructor(cb) { this._cb = cb; global.__lastMutationObserver = this; }
+      observe() { /* no-op */ }
+      disconnect() { /* no-op */ }
     }
     global.MutationObserver = _MO;
   }
@@ -64,6 +64,15 @@ test('contentScript extracts id and price and annotates elements', async () => {
   const badge = document.querySelector('div[style]');
   expect(badge).not.toBeNull();
   expect(badge.textContent).toContain('Undervalued');
+  // cleanup: disconnect observer and clear any pending timeouts
+  if (context && context.MutationObserver && global.__lastMutationObserver && typeof global.__lastMutationObserver.disconnect === 'function') {
+    try { global.__lastMutationObserver.disconnect(); } catch (e) {}
+    global.__lastMutationObserver = null;
+  }
+  if (context && context.window && context.window.__axievale_mutation_timeout) {
+    try { clearTimeout(context.window.__axievale_mutation_timeout); } catch (e) {}
+    context.window.__axievale_mutation_timeout = null;
+  }
 });
 
 test('background handles getValuation and returns fetch error', async () => {
@@ -102,6 +111,12 @@ test('background handles getValuation and returns fetch error', async () => {
 
   // Allow async flow
   await new Promise(r => setTimeout(r, 20));
+
+  // cleanup any mutation timeout created by script
+  if (bgContext && bgContext.window && bgContext.window.__axievale_mutation_timeout) {
+    try { clearTimeout(bgContext.window.__axievale_mutation_timeout); } catch (e) {}
+    bgContext.window.__axievale_mutation_timeout = null;
+  }
 
   expect(sendResponse).toHaveBeenCalled();
 });
