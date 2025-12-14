@@ -49,12 +49,17 @@ test('contentScript extracts id and price and annotates elements', async () => {
   const context = {
     window: global.window,
     document: global.document,
-    MutationObserver: global.MutationObserver,
     chrome: global.chrome,
     fetch: global.fetch,
     console: console,
     setTimeout: setTimeout,
     clearTimeout: clearTimeout
+  };
+  // Provide a MutationObserver in the VM context that we can inspect/cleanup
+  context.MutationObserver = class {
+    constructor(cb) { this._cb = cb; context.__lastMutationObserver = this; }
+    observe() {}
+    disconnect() {}
   };
   vm.runInNewContext(script, context, { filename: scriptPath });
 
@@ -89,13 +94,13 @@ test('background handles getValuation and returns fetch error', async () => {
   const bgContext = {
     window: global.window,
     document: global.document,
-    MutationObserver: global.MutationObserver,
     chrome: global.chrome,
     fetch: global.fetch,
     console: console,
     setTimeout: setTimeout,
     clearTimeout: clearTimeout
   };
+  bgContext.MutationObserver = class { constructor(cb) { this._cb = cb; bgContext.__lastMutationObserver = this; } observe() {} disconnect() {} };
   vm.runInNewContext(script, bgContext, { filename: scriptPath });
 
   // Find added listener
@@ -138,6 +143,7 @@ test('popup reads and writes storage fields', async () => {
     setTimeout: setTimeout,
     clearTimeout: clearTimeout
   };
+  popupContext.MutationObserver = class { constructor(cb) { this._cb = cb; popupContext.__lastMutationObserver = this; } observe() {} disconnect() {} };
   vm.runInNewContext(script, popupContext, { filename: scriptPath });
 
   // Wait for async init
