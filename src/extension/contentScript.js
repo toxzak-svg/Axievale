@@ -1,4 +1,6 @@
 // Content script: extract listing elements and send axieId + price to background
+const __AXIEVALE_IS_TEST = (typeof window !== 'undefined') && window.__AXIEVALE_TEST__;
+
 (function() {
   function extractListings() {
     // Marketplace listing selector assumptions (may need tuning)
@@ -85,14 +87,26 @@
     }
   }
 
-  // Initial run and observe for changes
-  processListings();
+  // Initial run and observe for changes (skip auto-run in test mode)
+  if (!__AXIEVALE_IS_TEST) {
+    processListings();
 
-  const observer = new MutationObserver((mutations) => {
-    // debounce
-    clearTimeout(window.__axievale_mutation_timeout);
-    window.__axievale_mutation_timeout = setTimeout(processListings, 400);
-  });
+    const observer = new MutationObserver((mutations) => {
+      // debounce
+      clearTimeout(window.__axievale_mutation_timeout);
+      window.__axievale_mutation_timeout = setTimeout(processListings, 400);
+    });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    // In test mode expose a controllable API for tests
+    try {
+      window.__axievale_test_api = window.__axievale_test_api || {};
+      window.__axievale_test_api.processListings = processListings;
+      window.__axievale_test_api.extractListings = extractListings;
+      window.__axievale_test_api.annotateElement = annotateElement;
+    } catch (e) {
+      // ignore in non-browser test harness
+    }
+  }
 })();

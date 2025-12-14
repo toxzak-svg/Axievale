@@ -26,6 +26,21 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.resetAllMocks();
+  // Disconnect any MutationObserver created in tests
+  try {
+    if (global.__lastMutationObserver && typeof global.__lastMutationObserver.disconnect === 'function') {
+      global.__lastMutationObserver.disconnect();
+      global.__lastMutationObserver = null;
+    }
+  } catch (e) {}
+  // Clear timers to avoid open handles
+  try { jest.clearAllTimers(); } catch (e) {}
+  // Reset any mocked runtime listeners
+  try {
+    if (global.chrome && global.chrome.runtime && global.chrome.runtime.onMessage && global.chrome.runtime.onMessage.addListener && global.chrome.runtime.onMessage.addListener.mockReset) {
+      global.chrome.runtime.onMessage.addListener.mockReset();
+    }
+  } catch (e) {}
   delete global.chrome;
   delete global.fetch;
 });
