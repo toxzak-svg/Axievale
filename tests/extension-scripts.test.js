@@ -6,6 +6,10 @@ const fs = require('fs');
 const path = require('path');
 
 beforeEach(() => {
+  // mark test-mode early so required extension files skip auto-run
+  if (typeof global.window === 'undefined') global.window = global;
+  global.window.__AXIEVALE_TEST__ = true;
+
   // Minimal chrome mock
   global.chrome = {
     runtime: { sendMessage: jest.fn() },
@@ -43,6 +47,16 @@ afterEach(() => {
   } catch (e) {}
   delete global.chrome;
   delete global.fetch;
+  // Clear require cache for extension scripts so each test starts fresh
+  try {
+    const extFiles = ['src/extension/contentScript.js', 'src/extension/background.js', 'src/extension/popup.js'];
+    extFiles.forEach(f => {
+      const full = require('path').join(__dirname, '..', f);
+      delete require.cache[require.resolve(full)];
+    });
+  } catch (e) {}
+  // remove test flag
+  try { if (global.window) delete global.window.__AXIEVALE_TEST__; } catch (e) {}
 });
 
 test('contentScript extracts id and price and annotates elements', async () => {
