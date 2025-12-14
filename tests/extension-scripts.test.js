@@ -73,25 +73,20 @@ test('contentScript extracts id and price and annotates elements', async () => {
   expect(badge).not.toBeNull();
   expect(badge.textContent).toContain('Undervalued');
   // cleanup: disconnect observer and clear any pending timeouts
-  if (context && context.MutationObserver && global.__lastMutationObserver && typeof global.__lastMutationObserver.disconnect === 'function') {
-    try { global.__lastMutationObserver.disconnect(); } catch (e) {}
-    global.__lastMutationObserver = null;
-  }
-  if (context && context.window && context.window.__axievale_mutation_timeout) {
-    try { clearTimeout(context.window.__axievale_mutation_timeout); } catch (e) {}
-    context.window.__axievale_mutation_timeout = null;
-  }
+  try { if (global.__lastMutationObserver && typeof global.__lastMutationObserver.disconnect === 'function') { global.__lastMutationObserver.disconnect(); global.__lastMutationObserver = null; } } catch (e) {}
+  try { if (global.window && global.window.__axievale_mutation_timeout) { clearTimeout(global.window.__axievale_mutation_timeout); global.window.__axievale_mutation_timeout = null; } } catch (e) {}
 }, 2000);
 
 test('background handles getValuation and returns fetch error', async () => {
-  // Require background script to register listener
-  const scriptPath = path.join(__dirname, '..', 'src', 'extension', 'background.js');
-  require(scriptPath);
-  // Mock storage get to return baseUrl empty
+  // Mock storage get to return baseUrl empty and provide runtime listener mock before requiring script
   global.chrome = { storage: { sync: { get: jest.fn().mockResolvedValue({}) } }, runtime: { onMessage: { addListener: jest.fn() } } };
 
   // Mock fetch to return non-ok
   global.fetch.mockResolvedValue({ ok: false, status: 500, text: async () => 'err' });
+
+  // Require background script to register listener
+  const scriptPath = path.join(__dirname, '..', 'src', 'extension', 'background.js');
+  require(scriptPath);
 
   // Find added listener
   const listener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
@@ -108,10 +103,7 @@ test('background handles getValuation and returns fetch error', async () => {
   await new Promise(r => setTimeout(r, 20));
 
   // cleanup any mutation timeout created by script
-  if (bgContext && bgContext.window && bgContext.window.__axievale_mutation_timeout) {
-    try { clearTimeout(bgContext.window.__axievale_mutation_timeout); } catch (e) {}
-    bgContext.window.__axievale_mutation_timeout = null;
-  }
+  try { if (global.window && global.window.__axievale_mutation_timeout) { clearTimeout(global.window.__axievale_mutation_timeout); global.window.__axievale_mutation_timeout = null; } } catch (e) {}
   expect(sendResponse).toHaveBeenCalled();
 }, 2000);
 
