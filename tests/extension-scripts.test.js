@@ -57,29 +57,17 @@ test('contentScript extracts id and price and annotates elements', async () => {
   // Mock chrome.runtime.sendMessage to return valuation
   chrome.runtime.sendMessage.mockImplementation(({ type }) => ({ success: true, data: { signal: 'undervalued', valuation: { estimatedValue: 10 } } }));
 
-  // Load and execute contentScript using vm to preserve filename for coverage
-  const vm = require('vm');
-  const scriptPath = path.join(__dirname, '..', 'src', 'extension', 'contentScript.js');
-  const script = fs.readFileSync(scriptPath, 'utf8');
-  const context = {
-    window: global.window,
-    document: global.document,
-    chrome: global.chrome,
-    fetch: global.fetch,
-    console: console,
-    setTimeout: setTimeout,
-    clearTimeout: clearTimeout
-  };
-  // Provide a MutationObserver in the VM context that we can inspect/cleanup
-  context.MutationObserver = class {
-    constructor(cb) { this._cb = cb; context.__lastMutationObserver = this; }
-    observe() {}
-    disconnect() {}
-  };
-  vm.runInNewContext(script, context, { filename: scriptPath });
+  // Load content script in test-mode so it doesn't auto-run observers; require for coverage
+  global.window.__AXIEVALE_TEST__ = true;
+  require(path.join(__dirname, '..', 'src', 'extension', 'contentScript.js'));
 
-  // Wait a tick for processListings to run
-  await new Promise(r => setTimeout(r, 20));
+  // Run the exposed test API to process listings
+  if (global.window.__axievale_test_api && typeof global.window.__axievale_test_api.processListings === 'function') {
+    await global.window.__axievale_test_api.processListings();
+  } else {
+    // fallback short wait
+    await new Promise(r => setTimeout(r, 20));
+  }
 
   const badge = document.querySelector('div[style]');
   expect(badge).not.toBeNull();
@@ -96,27 +84,14 @@ test('contentScript extracts id and price and annotates elements', async () => {
 }, 2000);
 
 test('background handles getValuation and returns fetch error', async () => {
-  const vm = require('vm');
+  // Require background script to register listener
   const scriptPath = path.join(__dirname, '..', 'src', 'extension', 'background.js');
-  const script = fs.readFileSync(scriptPath, 'utf8');
+  require(scriptPath);
   // Mock storage get to return baseUrl empty
   global.chrome = { storage: { sync: { get: jest.fn().mockResolvedValue({}) } }, runtime: { onMessage: { addListener: jest.fn() } } };
 
   // Mock fetch to return non-ok
   global.fetch.mockResolvedValue({ ok: false, status: 500, text: async () => 'err' });
-
-  // Emulate runtime listener behavior: execute script to register listener
-  const bgContext = {
-    window: global.window,
-    document: global.document,
-    chrome: global.chrome,
-    fetch: global.fetch,
-    console: console,
-    setTimeout: setTimeout,
-    clearTimeout: clearTimeout
-  };
-  bgContext.MutationObserver = class { constructor(cb) { this._cb = cb; bgContext.__lastMutationObserver = this; } observe() {} disconnect() {} };
-  vm.runInNewContext(script, bgContext, { filename: scriptPath });
 
   // Find added listener
   const listener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
@@ -145,23 +120,15 @@ test('popup reads and writes storage fields', async () => {
   document.body.innerHTML = `<input id="baseUrl"/><input id="extSecret"/><button id="save"></button>`;
   global.chrome = { storage: { sync: { get: jest.fn().mockResolvedValue({ baseUrl: 'http://x', extensionSecret: 's' }), set: jest.fn().mockResolvedValue() } } };
 
-  const vm = require('vm');
-  const scriptPath = path.join(__dirname, '..', 'src', 'extension', 'popup.js');
-  const script = fs.readFileSync(scriptPath, 'utf8');
-  const popupContext = {
-    window: global.window,
-    document: global.document,
-    chrome: global.chrome,
-    fetch: global.fetch,
-    console: console,
-    setTimeout: setTimeout,
-    clearTimeout: clearTimeout
-  };
-  popupContext.MutationObserver = class { constructor(cb) { this._cb = cb; popupContext.__lastMutationObserver = this; } observe() {} disconnect() {} };
-  vm.runInNewContext(script, popupContext, { filename: scriptPath });
-
-  // Wait for async init
-  await new Promise(r => setTimeout(r, 10));
+  // Require popup script in test-mode and call initPopup
+  global.window.__AXIEVALE_TEST__ = true;
+  const popupPath = path.join(__dirname, '..', 'src', 'extension', 'popup.js');
+  require(popupPath);
+  if (global.window.__axievale_test_api && typeof global.window.__axievale_test_api.initPopup === 'function') {
+    await global.window.__axievale_test_api.initPopup();
+  } else {
+    await new Promise(r => setTimeout(r, 10));
+  }
   expect(document.getElementById('baseUrl').value).toBe('http://x');
 
   // Simulate clicking save
